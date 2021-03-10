@@ -30,6 +30,23 @@ jobs:
             pip install -e . --no-cache-dir
       - persist_to_workspace:
           root: ~/
+          paths: project/*  
+  setup-environment37:
+    executor: python37-executor
+    steps:
+      - checkout
+      - run:
+          name: Version information
+          command: python --version
+      - run:
+          name: 3.7 Setup VENV & install dependencies
+          command: |
+            python -m venv venv
+            source venv/bin/activate
+            pip install --upgrade "pip>=19.3"
+            pip install -e . --no-cache-dir
+      - persist_to_workspace:
+          root: ~/
           paths: project/*
   unit-tests:
     parameters:
@@ -141,7 +158,7 @@ workflows:
           n: "3.8"
           requires:
             - setup-environment
-      - setup-environment37:
+      - setup-environment:
           e: python37-executor
           n: "3.7"
       - type-checking:
