@@ -22,7 +22,7 @@ jobs:
           name: Version information
           command: python --version
       - run:
-          name: << parameters.e >> Setup VENV & install dependencies
+          name: << parameters.n >> Setup VENV & install dependencies
           command: |
             python -m venv venv
             source venv/bin/activate
@@ -30,7 +30,7 @@ jobs:
             pip install -e . --no-cache-dir
       - persist_to_workspace:
           root: ~/
-          paths: project/*  
+          paths: project/*
   setup-environment37:
     executor: python37-executor
     steps:
@@ -59,7 +59,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: << parameters.e >> Unit tests
+          name: << parameters.n >> Unit tests
           command: |
             source venv/bin/activate
             make test
@@ -74,7 +74,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: << parameters.e >> Python code style checking
+          name: << parameters.n >> Python code style checking
           command: |
             source venv/bin/activate
             make lint
@@ -89,7 +89,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: << parameters.e >> Type checking
+          name: << parameters.n >> Type checking
           command: |
             source venv/bin/activate
             make type
@@ -104,7 +104,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: << parameters.e >> Coverage checking
+          name: << parameters.n >> Coverage checking
           command: |
             source venv/bin/activate
             make coverage
@@ -181,7 +181,6 @@ workflows:
           n: "3.7"
           requires:
             - setup-environment37
-
   update-docs:
     jobs:
       - approve-update:
