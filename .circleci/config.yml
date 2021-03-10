@@ -10,14 +10,19 @@ executors:
 
 jobs:
   setup-environment:
-    executor: python38-executor
+    parameters:
+      e:
+        type: executor
+      n:
+        type: string
+    executor: << parameters.e >>
     steps:
       - checkout
       - run:
           name: Version information
           command: python --version
       - run:
-          name: Setup VENV & install dependencies
+          name: [<< parameters.e >>] Setup VENV & install dependencies
           command: |
             python -m venv venv
             source venv/bin/activate
@@ -27,42 +32,62 @@ jobs:
           root: ~/
           paths: project/*
   unit-tests:
-    executor: python38-executor
+    parameters:
+      e:
+        type: executor
+      n:
+        type: string
+    executor: << parameters.e >>
     steps:
       - attach_workspace:
           at: ~/
       - run:
-          name: Unit tests
+          name: [<< parameters.e >>] Unit tests
           command: |
             source venv/bin/activate
             make test
   linting:
-    executor: python38-executor
+    parameters:
+      e:
+        type: executor
+      n:
+        type: string
+    executor: << parameters.e >>
     steps:
       - attach_workspace:
           at: ~/
       - run:
-          name: Python code style checking
+          name: [<< parameters.e >>] Python code style checking
           command: |
             source venv/bin/activate
             make lint
   type-checking:
-    executor: python38-executor
+    parameters:
+      e:
+        type: executor
+      n:
+        type: string
+    executor: << parameters.e >>
     steps:
       - attach_workspace:
           at: ~/
       - run:
-          name: Type checking
+          name: [<< parameters.e >>] Type checking
           command: |
             source venv/bin/activate
             make type
   code-coverage:
-    executor: python38-executor
+    parameters:
+      e:
+        type: executor
+      n:
+        type: string
+    executor: << parameters.e >>
     steps:
       - attach_workspace:
           at: ~/
       - run:
-          name: Coverage checking
+          name: [<< parameters.e >>] Coverage checking
           command: |
             source venv/bin/activate
             make coverage
@@ -93,19 +118,52 @@ jobs:
 workflows:
   main:
     jobs:
-      - setup-environment
+      - setup-environment:
+          e: python38-executor
+          n: "3.8"
       - type-checking:
+          e: python38-executor
+          n: "3.8"
           requires:
             - setup-environment
       - linting:
+          e: python38-executor
+          n: "3.8"
           requires:
             - setup-environment
       - unit-tests:
+          e: python38-executor
+          n: "3.8"
           requires:
             - setup-environment
       - code-coverage:
+          e: python38-executor
+          n: "3.8"
           requires:
             - setup-environment
+      - setup-environment37:
+          e: python37-executor
+          n: "3.7"
+      - type-checking:
+          e: python37-executor
+          n: "3.7"
+          requires:
+            - setup-environment37
+      - linting:
+          e: python37-executor
+          n: "3.7"
+          requires:
+            - setup-environment37
+      - unit-tests:
+          e: python37-executor
+          n: "3.7"
+          requires:
+            - setup-environment37
+      - code-coverage:
+          e: python37-executor
+          n: "3.7"
+          requires:
+            - setup-environment37
 
   update-docs:
     jobs:
