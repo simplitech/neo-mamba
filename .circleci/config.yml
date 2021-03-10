@@ -22,7 +22,7 @@ jobs:
           name: Version information
           command: python --version
       - run:
-          name: [<< parameters.e >>] Setup VENV & install dependencies
+          name: << parameters.e >> Setup VENV & install dependencies
           command: |
             python -m venv venv
             source venv/bin/activate
@@ -42,7 +42,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: [<< parameters.e >>] Unit tests
+          name: << parameters.e >> Unit tests
           command: |
             source venv/bin/activate
             make test
@@ -57,7 +57,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: [<< parameters.e >>] Python code style checking
+          name: << parameters.e >> Python code style checking
           command: |
             source venv/bin/activate
             make lint
@@ -72,7 +72,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: [<< parameters.e >>] Type checking
+          name: << parameters.e >> Type checking
           command: |
             source venv/bin/activate
             make type
@@ -87,7 +87,7 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: [<< parameters.e >>] Coverage checking
+          name: << parameters.e >> Coverage checking
           command: |
             source venv/bin/activate
             make coverage
