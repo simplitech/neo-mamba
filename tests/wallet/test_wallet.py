@@ -10,7 +10,7 @@ class WalletCreationTestCase(unittest.TestCase):
         return None
 
     def test_wallet_default_value(self):
-        wallet = Wallet(path='wallet.json')
+        wallet = Wallet.default('wallet.json')
         self.assertEqual(None, wallet.name)
         self.assertEqual('3.0', wallet.version)
         self.assertEqual(ScryptParameters.default().n, wallet.scrypt.n)
@@ -20,7 +20,7 @@ class WalletCreationTestCase(unittest.TestCase):
         self.assertEqual(None, wallet.extra)
 
     def test_wallet_save(self):
-        wallet = Wallet(path='wallet_save.json', name='NEP6 Wallet')
+        wallet = Wallet.default('wallet_save.json', 'NEP6 Wallet')
         wallet.save()
         self.assertTrue(os.path.isfile('wallet_save.json'))
 
@@ -35,11 +35,11 @@ class WalletCreationTestCase(unittest.TestCase):
         self.assertEqual(data['extra'], wallet.extra)
 
     def test_wallet_load(self):
-        wallet = Wallet(path='wallet_load.json', name='NEP6 Wallet')
+        wallet = Wallet.default('wallet_load.json', 'NEP6 Wallet')
         wallet.save()
         self.assertTrue(os.path.isfile('wallet_load.json'))
 
-        wallet_loaded = Wallet(path='wallet_load.json')
+        wallet_loaded = Wallet.from_file('wallet_load.json')
         self.assertEqual(wallet.name, wallet_loaded.name)
         self.assertEqual(wallet.version, wallet_loaded.version)
         self.assertEqual(wallet.scrypt.n, wallet_loaded.scrypt.n)
@@ -50,7 +50,7 @@ class WalletCreationTestCase(unittest.TestCase):
 
         with open('wallet_load.json') as json_file:
             data = json.load(json_file)
-        wallet_loaded_json = Wallet(json_wallet=data)
+        wallet_loaded_json = Wallet.from_json(data)
         self.assertEqual(wallet.name, wallet_loaded_json.name)
         self.assertEqual(wallet.version, wallet_loaded_json.version)
         self.assertEqual(wallet.scrypt.n, wallet_loaded_json.scrypt.n)
