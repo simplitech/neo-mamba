@@ -58,4 +58,3 @@ class WalletCreationTestCase(unittest.TestCase):
         self.assertEqual(wallet.scrypt.p, wallet_loaded_json.scrypt.p)
         self.assertEqual(wallet.accounts, wallet_loaded_json.accounts)
         self.assertEqual(wallet.extra, wallet_loaded_json.extra)
-

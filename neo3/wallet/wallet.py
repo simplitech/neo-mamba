@@ -1,6 +1,6 @@
 import os.path
 import json
-from jsonschema import validate
+from jsonschema import validate  # type: ignore
 from typing import List, Dict, Any, TypeVar, Type, Optional
 
 from neo3.core import IJson
@@ -18,38 +18,51 @@ def encode_scrypt_parameters(scrypt_parameters):
 
 T = TypeVar('T', bound='Wallet')
 
-
 # A sample schema, like what we'd get from json.load()
 schema = {
     "type": "object",
     "properties": {
         "path": {"type": "string"},
         "name": {"type": "string"},
-        "scrypt": {
-            "type": "object",
-            "properties": {
-                "n": {"type": "int"},
-                "r": {"type": "int"},
-                "p": {"type": "int"}
-            }
-        },
+        "scrypt": {"$ref": "#/$defs/scrypt_parameters"},
         "accounts": {
             "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "address": {"type": "string"},
-                    "label": {"type": "string"},
-                    "is_default": {"type": ""},
-                    "lock": {"type": ""},
-                    "key": {"type": ""},
-                    "contract": {"type": ""},
-                    "extra": {"type": ""}
-                }
-            }
+            "items": {"$ref": "#/$defs/account"},
+            "minItems": 0,
         },
-        "extra": {"type": ""},
+        "extra": {"type": ["object", "null"],
+                  "properties": {},
+                  "additionalProperties": True
+                  },
     },
+    "required": ["path", "name", "scrypt", "accounts", "extra"],
+    "$defs": {
+        "account": {
+            "type": "object",
+            "properties": {
+                "address": {"type": "string"},
+                "label": {"type": "string"},
+                "is_default": {"type": "boolean"},
+                "lock": {"type": "boolean"},
+                "key": {"type": "string"},
+                "contract": {"type": ""},
+                "extra": {"type": ["object", "null"],
+                          "properties": {},
+                          "additionalProperties": True}
+            },
+            "required": ["address", "label", "is_default", "lock", "key", "contract", "extra"]
+
+        },
+        "scrypt_parameters": {
+            "type": "object",
+            "properties": {
+                "n": {"type": "integer"},
+                "r": {"type": "integer"},
+                "p": {"type": "integer"}
+            },
+            "required": ["n", "r", "p"]
+        }
+    }
 }
 
 
@@ -62,6 +75,17 @@ class Wallet(IJson):
                  scrypt: ScryptParameters,
                  accounts: List[Account],
                  extra: Optional[Dict[Any, Any]]):
+        """
+        Args:
+            path: the JSON's path
+            name: a label that the user has given to the wallet
+            version: the wallet's version, must be equal or greater then 3.0
+            scrypt: a ScryptParameters object which describes the parameters of the SCrypt algorithm used for encrypting
+                    and decrypting the private keys in the wallet.
+            accounts: an array of Account objects which describe the details of each account in the wallet.
+            extra: an object that is defined by the implementor of the client for storing extra data. This field can be
+                   None.
+        """
 
         self.path = path
         self.name = name
@@ -71,18 +95,34 @@ class Wallet(IJson):
         self.extra = extra
 
     @classmethod
-    def default(cls: Type[T], path: str, name=None) -> T:
+    def default(cls: Type[T], path: str, name: Optional[str] = None) -> T:
+        """
+        Create a new Wallet with the default settings.
+
+        Args:
+            path: the JSON's path.
+            name: the Wallet name.
+        """
         return cls(path, name, "3.0", ScryptParameters.default(), [], None)
 
     @classmethod
     def from_file(cls: Type[T], path: str) -> T:
+        """
+        Create a Wallet from a JSON file.
+
+        Args:
+            path: the JSON's path.
+        """
         if os.path.isfile(path):
             with open(path) as json_file:
                 data = json.load(json_file)
 
-        return Wallet.from_json(data)
+        return cls.from_json(data)
 
     def save(self):
+        """
+        Save a wallet as a JSON.
+        """
         with open(self.path, 'w') as json_file:
             json.dump(self.to_json(), json_file, default=encode_scrypt_parameters)
 
@@ -112,7 +152,7 @@ class Wallet(IJson):
 
         Raises:
             KeyError: if the data supplied does not contain the necessary key.
-            ValueError: if the 'version' property is under 3.0 or is not a valid string
+            ValueError: if the 'version' property is under 3.0 or is not a valid string.
         """
         validate(json, schema=schema)
         try:
