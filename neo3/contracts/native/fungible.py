@@ -1,8 +1,9 @@
 from __future__ import annotations
+import struct
 from .nativecontract import NativeContract
 from neo3 import storage, contracts, vm, settings
 from neo3.core import types, msgrouter, cryptography, serialization, to_script_hash, Size as s, IInteroperable
-from typing import Tuple, List, Dict, Sequence, cast
+from typing import Tuple, List, Dict, Sequence, cast, Optional
 
 
 class FungibleTokenStorageState(IInteroperable, serialization.ISerializable):
@@ -463,6 +464,9 @@ class NeoToken(FungibleToken):
     _candidates_dirty = True
     _candidates: List[Tuple[cryptography.ECPoint, vm.BigInteger]] = []
 
+    def _to_uint32(self, value: int) -> bytes:
+        return struct.pack(">I", value)
+
     def _calculate_bonus(self,
                          snapshot: storage.Snapshot,
                          vote: cryptography.ECPoint,
@@ -479,22 +483,22 @@ class NeoToken(FungibleToken):
         if vote.is_zero():
             return neo_holder_reward
         border = (self.key_voter_reward_per_committee + vote).to_array()
-        start_bytes = vm.BigInteger(start).to_array()
+        start_bytes = self._to_uint32(start)
         key_start = (self.key_voter_reward_per_committee + vote + start_bytes).to_array()
 
-        items = list(snapshot.storages.find_range(self.hash, key_start, border, "reverse"))
-        if len(items) > 0:
-            start_reward_per_neo = vm.BigInteger(items[0][1].value)  # first pair returned, StorageItem
-        else:
+        try:
+            pair = next(snapshot.storages.find_range(self.hash, key_start, border, "reverse"))
+            start_reward_per_neo = vm.BigInteger(pair[1].value)  # first pair returned, StorageItem
+        except StopIteration:
             start_reward_per_neo = vm.BigInteger.zero()
 
-        end_bytes = vm.BigInteger(end).to_array()
+        end_bytes = self._to_uint32(end)
         key_end = (self.key_voter_reward_per_committee + vote + end_bytes).to_array()
 
-        items = list(snapshot.storages.find_range(self.hash, key_end, border, "reverse"))
-        if len(items) > 0:
-            end_reward_per_neo = vm.BigInteger(items[0][1].value)  # first pair returned, StorageItem
-        else:
+        try:
+            pair = next(snapshot.storages.find_range(self.hash, key_end, border, "reverse"))
+            end_reward_per_neo = vm.BigInteger(pair[1].value)  # first pair returned, StorageItem
+        except StopIteration:
             end_reward_per_neo = vm.BigInteger.zero()
 
         return neo_holder_reward + value * (end_reward_per_neo - start_reward_per_neo) / 100000000
@@ -628,6 +632,8 @@ class NeoToken(FungibleToken):
         # set next committee
         if self._should_refresh_committee(engine.snapshot.persisting_block.index):
             validators = self._compute_committee_members(engine.snapshot)
+            if self._committee_state is None:
+                self._committee_state = _CommitteeState.from_snapshot(engine.snapshot)
             self._committee_state._validators = validators
             self._committee_state.persist(engine.snapshot)
 
@@ -649,16 +655,16 @@ class NeoToken(FungibleToken):
                 factor = 2 if i < n else 1
                 member_votes = self._committee_state[member]
                 if member_votes > 0:
-                    voter_sum_reward_per_neo = factor * voter_reward_of_each_committee / member_votes
+                    voter_sum_reward_per_neo = voter_reward_of_each_committee * factor / member_votes
                     voter_reward_key = (self.key_voter_reward_per_committee
                                         + member
-                                        + vm.BigInteger(engine.snapshot.persisting_block.index + 1)
-                                        ).to_array()
+                                        + self._to_uint32(engine.snapshot.persisting_block.index + 1)
+                                        )
                     border = (self.key_voter_reward_per_committee + member).to_array()
-                    result = engine.snapshot.storages.find_range(self.hash, voter_reward_key.to_array(), border)
-                    if len(result) > 0:
-                        result = result[0]
-                    else:
+                    try:
+                        pair = next(engine.snapshot.storages.find_range(voter_reward_key.to_array(), border, "reverse"))
+                        result = vm.BigInteger(pair[1].value)
+                    except StopIteration:
                         result = vm.BigInteger.zero()
                     voter_sum_reward_per_neo += result
                     engine.snapshot.storages.put(voter_reward_key,
@@ -779,6 +785,8 @@ class NeoToken(FungibleToken):
             old_value = vm.BigInteger(si_voters_count.value)
             new_value = old_value + account_state.balance
             si_voters_count.value = new_value.to_array()
+
+        self._distribute_gas(engine, account, account_state)
 
         if not account_state.vote_to.is_zero():
             sk_validator = self.key_candidate + account_state.vote_to

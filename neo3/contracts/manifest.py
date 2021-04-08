@@ -394,7 +394,7 @@ class ContractManifest(serialization.ISerializable, IJson):
                                            self.trusts)))  # type: ignore
             )
         if self.extra is None:
-            struct.append(vm.NullStackItem())
+            struct.append(vm.ByteStringStackItem("null"))
         else:
             struct.append(vm.ByteStringStackItem(json.dumps(self.extra)))
         return struct
