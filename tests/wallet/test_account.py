@@ -1,23 +1,18 @@
 import unittest
-from neo3.wallet.utils import Utils
-from neo3.wallet import Account
+from neo3.wallet import Account, private_key_from_nep2
+
 
 class AccountCreationTestCase(unittest.TestCase):
     def shortDescription(self):
         # disable docstring printing in test runner
         return None
 
-
     def test_createAccountUsingNep2(self):
-        #Neo 2 NEP-2
         nep2 = "6PYN6mjwYfjPUuYT3Exajvx25UddFVLpCw4bMsmtLdnKwZ9t1Mi3CfKe8S"
         password = "Satoshi"
-        privateKey = Utils.PrivateKeyFromNEP2(nep2, password)
-        print(privateKey)
+        private_key = private_key_from_nep2(nep2, password)
+        print(private_key)
         return None
-
-
-class AccountCreationTestCase(unittest.TestCase):
 
     def test_account_from_json(self):
         json = {
@@ -49,4 +44,3 @@ class AccountCreationTestCase(unittest.TestCase):
         self.assertEqual(json['address'], account.address)
         result = account.to_json()
         self.assertEqual(result, json)
-

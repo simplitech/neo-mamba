@@ -10,7 +10,7 @@ class Account:
         self._script_hash: types.UInt160 = script_hash
         self._nep2key: str = nep2key
         self.label = ''
-        self.is_default = True  # Acho que não é bom botar True como default ???
+        self.is_default = False
         self.lock = False
         self._key: cryptography.KeyPair = None
         self.contract: contracts.Contract = None
@@ -18,7 +18,7 @@ class Account:
 
     @property
     def address(self) -> str:
-        return wallet.to_address(self._script_hash, settings.network.account_version)
+        return wallet.to_address(self._script_hash)
     
     @property
     def decrypted(self) -> bool:
@@ -30,7 +30,7 @@ class Account:
 
     @classmethod
     def from_json(cls, json: dict) -> Account:
-        account = cls(wallet.to_script_hash(json['address'], settings.network.account_version), json['key'])
+        account = cls(wallet.address_to_script_hash(json['address'], settings.network.account_version), json['key'])
 
         account.label = json['label']
         account.is_default = json['isdefault']
