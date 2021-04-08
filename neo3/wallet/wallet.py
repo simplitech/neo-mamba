@@ -10,7 +10,8 @@ from neo3.wallet.account import Account
 
 def encode_scrypt_parameters(scrypt_parameters):
     if isinstance(scrypt_parameters, ScryptParameters):
-        return {'n': scrypt_parameters.n, 'r': scrypt_parameters.r, 'p': scrypt_parameters.p}
+        return {'n': scrypt_parameters.n, 'r': scrypt_parameters.r, 'p': scrypt_parameters.p,
+                'length': scrypt_parameters.length}
     else:
         type_name = scrypt_parameters.__class__.__name__
         raise TypeError(f"Object of type '{type_name}' is not JSON serializable")
@@ -58,7 +59,8 @@ schema = {
             "properties": {
                 "n": {"type": "integer"},
                 "r": {"type": "integer"},
-                "p": {"type": "integer"}
+                "p": {"type": "integer"},
+                "length": {"type": "integer"}
             },
             "required": ["n", "r", "p"]
         }
@@ -164,6 +166,9 @@ class Wallet(IJson):
         return cls(json['path'],
                    json['name'],
                    json['version'],
-                   ScryptParameters(json['scrypt']['n'], json['scrypt']['r'], json['scrypt']['p']),
+                   ScryptParameters(json['scrypt']['n'],
+                                    json['scrypt']['r'],
+                                    json['scrypt']['p'],
+                                    json['scrypt']['length']),
                    json['accounts'],
                    json['extra'])

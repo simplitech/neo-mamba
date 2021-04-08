@@ -1,5 +1,5 @@
 import unittest
-from neo3.wallet import Wallet, ScryptParameters
+from neo3.wallet.wallet import Wallet, ScryptParameters
 import os.path
 import json
 
@@ -16,6 +16,7 @@ class WalletCreationTestCase(unittest.TestCase):
         self.assertEqual(ScryptParameters.default().n, wallet.scrypt.n)
         self.assertEqual(ScryptParameters.default().r, wallet.scrypt.r)
         self.assertEqual(ScryptParameters.default().p, wallet.scrypt.p)
+        self.assertEqual(ScryptParameters.default().length, wallet.scrypt.length)
         self.assertEqual([], wallet.accounts)
         self.assertEqual(None, wallet.extra)
 
