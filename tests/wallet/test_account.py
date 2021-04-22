@@ -1,5 +1,6 @@
 import unittest
-from neo3.wallet import Account, private_key_from_nep2, private_key_to_nep2
+from neo3.wallet.wallet import private_key_from_nep2, private_key_to_nep2
+from neo3.wallet.account import Account
 
 
 class AccountCreationTestCase(unittest.TestCase):

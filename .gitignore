@@ -7,3 +7,4 @@ htmlcov
 /venv37/
 .idea/
 neo_mamba.egg-info/
+venv/

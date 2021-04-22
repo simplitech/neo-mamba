@@ -1,20 +1,30 @@
 from __future__ import annotations
 
 from neo3 import contracts, settings, wallet
-from neo3.core import cryptography, types
-
+from neo3.core import cryptography
+from neo3.wallet.wallet import private_key_to_nep2, to_address, xor_bytes
 
 class Account:
 
-    def __init__(self, script_hash: types.UInt160, nep2key: str = None):
-        self._script_hash: types.UInt160 = script_hash
-        self._nep2key: str = nep2key
+    def __init__(self):
+        self.encrypted_key: str = ''
         self.label = ''
         self.is_default = False
         self.lock = False
-        self._key: cryptography.KeyPair = None
+        self._key_pair: cryptography.KeyPair = cryptography.KeyPair.generate()
         self.contract: contracts.Contract = None
         self.extra = None
+
+    def encrypt(self, password: str):
+        self.encrypted_key = private_key_to_nep2(self.private_key, password)
+
+    @property
+    def private_key(self) -> bytes:
+        return self._key_pair.private_key
+
+    @property
+    def public_key(self) -> bytes:
+        return self._key_pair.public_key
 
     @property
     def address(self) -> str:
@@ -22,11 +32,11 @@ class Account:
 
     @property
     def decrypted(self) -> bool:
-        return self._nep2key is not None or self._key is not None
+        return self.encrypted_key is not None or self._key_pair is not None
 
     @property
     def has_key(self) -> bool:
-        return self._nep2key is not None
+        return self.encrypted_key is not None
 
     @classmethod
     def from_json(cls, json: dict) -> Account:
@@ -46,14 +56,15 @@ class Account:
             'label': self.label,
             'isdefault': self.is_default,
             'lock': self.lock,
-            'key': self._nep2key,
+            'key': self.encrypted_key,
             'contract': self.contract.to_json() if hasattr(self.contract, 'to_json') else None,
             'extra': self.extra
         }
 
     def get_key(self, password: str = None) -> cryptography.KeyPair:
-        if self._nep2key is None:
+        if self.encrypted_key is None:
             return None
 
         # TODO: validate password
-        return self._key
+        return self._key_pair
+
