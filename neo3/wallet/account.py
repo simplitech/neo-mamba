@@ -4,10 +4,12 @@ import hashlib
 import unicodedata
 from typing import Optional
 from Crypto.Cipher import AES
-from neo3 import settings, contracts
+from neo3 import settings, contracts, vm
 from neo3.core import types, to_script_hash
-from neo3.core.cryptography import ECPoint
+from neo3.core.cryptography import ECPoint, sign
 from neo3.core.cryptography import KeyPair
+from neo3.network.payloads import Transaction, Witness
+from neo3.wallet.nep6contract import NEP6Contract
 from neo3.wallet.scrypt_parameters import ScryptParameters
 
 # both constants below are used to encrypt/decrypt a private key to/from a nep2 key
@@ -35,6 +37,7 @@ class Account:
 
         public_key: Optional[ECPoint] = None
         encrypted_key: Optional[bytes] = None
+        contract: Optional[NEP6Contract] = None
 
         if watch_only:
             if address is None:
@@ -51,18 +54,38 @@ class Account:
             else:
                 key_pair = KeyPair(private_key)
             encrypted_key = self.private_key_to_nep2(private_key, password)
-            script_hash = to_script_hash(contracts.Contract.create_signature_redeemscript(key_pair.public_key))
-            address = self.script_hash_to_address(script_hash)
             public_key = key_pair.public_key
+            checksign_script = contracts.Contract.create_signature_redeemscript(key_pair.public_key)
+            script_hash = to_script_hash(checksign_script)
+            address = self.script_hash_to_address(script_hash)
+
+            contract = NEP6Contract(checksign_script, [contracts.ContractParameterType.SIGNATURE])
+            contract.parameter_names = ["signature"]
 
         self.label: Optional[str] = label
         self.address: str = address
         self.public_key = public_key
         self.encrypted_key = encrypted_key
+        self.contract = contract
 
     @property
     def script_hash(self) -> types.UInt160:
         return self.address_to_script_hash(self.address)
+
+    def sign_tx(self, tx: Transaction, password: str, magic: int = settings.network.magic):
+        if not self.encrypted_key:
+            tx.witnesses += Witness(b'', b'')
+
+        else:
+            private_key = self.private_key_from_nep2(self.encrypted_key.decode("utf-8"), password)
+            message = magic.to_bytes(4, byteorder="little", signed=False) + \
+                      hash(tx).to_bytes(32, byteorder="big", signed=False)
+            signature = sign(message, private_key)
+            verification_script = self.contract.script
+            invocation_script: bytes = vm.OpCode.PUSHINT64
+            invocation_script += signature
+
+            tx.witnesses += Witness(invocation_script, verification_script)
 
     @classmethod
     def from_encrypted_key(cls, nep2_key: str, password: str) -> Account:
